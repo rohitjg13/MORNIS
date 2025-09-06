@@ -36,7 +36,7 @@ function App() {
     className="collapse-btn"
     onClick={() => setCollapsed((c) => !c)}
     aria-label="Toggle sidebar">
-      
+
     {collapsed ? "→" : "←"}
   </button>
 
@@ -82,15 +82,15 @@ function App() {
             <div className="alertItem">
               <img src="/alertYellow.png" alt="alert" className="alertIcon" />
               <div className="meta">
-                <div className="title">High Litter Level in Dadri</div>
-                <div className="time muted">Seen 15 mins ago</div>
+                <div className="title">Recent Dumping in Saket</div>
+                <div className="time muted">Seen 1 hour ago</div>
               </div>
             </div>
             <div className="alertItem">
               <img src="/trashIcon.png" alt="alert" className="alertIcon" />
               <div className="meta">
-                <div className="title">High Litter Level in Dadri</div>
-                <div className="time muted">Seen 15 mins ago</div>
+                <div className="title">Overflowing bins in ParkB</div>
+                <div className="time muted">Reported 3 hours ago</div>
               </div>
             </div>
           </div>
