@@ -7,7 +7,7 @@ use std::{env, error::Error, net::SocketAddr, str::FromStr};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-    if !dotenv::dotenv().is_ok() {
+    if dotenv::dotenv().is_err() {
         println!("Could not load .env");
         std::process::exit(0);
     }
