@@ -2,12 +2,12 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: "MORNIS",
-    slug: "MORNIS",
+    name: "TrachTrack",
+    slug: "TrachTrack",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "mornis",
+    scheme: "trachtrack",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     ios: {

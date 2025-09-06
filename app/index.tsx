@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
@@ -13,6 +14,16 @@ export default function Index() {
 
   const checkAuthState = async () => {
     try {
+      // Check if Supabase is properly configured
+      const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl;
+      const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey;
+      
+      if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'your-supabase-project-url') {
+        console.log('Supabase not configured, redirecting to login');
+        router.replace('/login');
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {

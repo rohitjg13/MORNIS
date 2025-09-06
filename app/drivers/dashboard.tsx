@@ -62,6 +62,7 @@ export default function DriverDashboard() {
 			await AsyncStorage.removeItem('userType');
 			router.replace('/login');
 		} catch (error) {
+			console.error('Sign out error:', error);
 			Alert.alert('Error', 'Failed to sign out');
 		}
 	};
@@ -98,6 +99,7 @@ export default function DriverDashboard() {
 			}
 		} catch (error) {
 			// For demo purposes, using mock data
+			console.error('Failed to fetch optimized route:', error);
 			const mockData: OptimizedRoute = {
 				status: 'ok',
 				route_text: [
@@ -179,7 +181,7 @@ export default function DriverDashboard() {
 					</View>
 				</View>
 
-				<Text style={styles.sectionTitle}>Today's Routes</Text>
+				<Text style={styles.sectionTitle}>Today&apos;s Routes</Text>
 
 				{routeData.map((route) => {
 					const currentStatus = getRouteStatus(route.id, route.status);

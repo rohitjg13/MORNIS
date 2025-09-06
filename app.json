@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "MORNIS",
-    "slug": "MORNIS",
+    "name": "TrashTrack",
+    "slug": "TrashTrack",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mornis",
+    "scheme": "trashtrack",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
