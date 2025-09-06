@@ -68,6 +68,7 @@ body,
   text-decoration: none;
   color: var(--muted);
   transition: background 0.15s;
+  cursor: pointer;
 }
 .nav-button:hover {
   background: #172033;
@@ -152,4 +153,154 @@ body,
   width: 50px;
   height: 50px;
   border-radius: 50%;
+}
+.alerts-dashboard {
+  background: #0f1723;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 28px;
+  min-height: 100vh;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.alerts-header {
+  margin-bottom: 32px;
+}
+
+.alerts-title {
+  font-size: 48px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  color: white;
+}
+
+.alerts-filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.alerts-filter-btn {
+  background: #374151;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s ease;
+}
+
+.alerts-filter-btn:hover {
+  background: #4b5563;
+}
+
+.alerts-filter-btn::after {
+  content: "▼";
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.alerts-table-container {
+  background: #1f2937;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.alerts-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.alerts-table-header {
+  background: #374151;
+}
+
+.alerts-table-header th {
+  padding: 20px 24px;
+  text-align: left;
+  font-weight: 500;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid #4b5563;
+}
+
+.alerts-table-row {
+  border-bottom: 1px solid #374151;
+  transition: background 0.2s ease;
+}
+
+.alerts-table-row:hover {
+  background: #374151;
+}
+
+.alerts-table-row:last-child {
+  border-bottom: none;
+}
+
+.alerts-table-cell {
+  padding: 20px 24px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.alerts-location {
+  font-weight: 500;
+}
+
+.alerts-severity-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.alerts-severity-high {
+  background: #dc2626;
+  color: white;
+}
+
+.alerts-severity-medium {
+  background: #f59e0b;
+  color: white;
+}
+
+.alerts-severity-low {
+  background: #10b981;
+  color: white;
+}
+
+.alerts-time {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.alerts-status {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+@media (max-width: 768px) {
+  .alerts-dashboard {
+    padding: 16px;
+  }
+
+  .alerts-title {
+    font-size: 32px;
+  }
+
+  .alerts-filters {
+    flex-wrap: wrap;
+  }
+
+  .alerts-table-container {
+    overflow-x: auto;
+  }
+
+  .alerts-table {
+    min-width: 600px;
+  }
 }
