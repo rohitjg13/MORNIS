@@ -1,7 +1,6 @@
-use crate::types::{self, IndexResponse};
+use crate::types::IndexResponse;
 use axum::{Json, Router, extract::State, routing::get, serve};
-use image::ImageReader;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::sync::{Arc, RwLock};
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
