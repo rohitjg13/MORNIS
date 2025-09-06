@@ -1,35 +1,47 @@
-import React from "react";
+import React, { useState } from "react";
 import "./App.css";
 
 function App() {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
     <div id="app">
       {/* LEFT SIDEBAR */}
-      <aside className="sideNav" aria-label="Main navigation">
+      <aside
+        className={`sideNav${collapsed ? " collapsed" : ""}`}
+        aria-label="Main navigation"
+      >
         <div className="brand">
-          <div className="logo-img" />
-          <div className="title">OLEUM</div>
+          <img src="/logo.png" alt="alert" className="logo-img" />
+          {!collapsed && <div className="title">TrashTrack</div>}
         </div>
 
         <nav className="nav-items" aria-label="Sidebar links">
           <a className="nav-button" href="#">
-            <div className="icon">☰</div>
-            <div>Dashboard</div>
+            <img src="/dashboard.png" alt="dashboardIcon" className="icon" />
+            {!collapsed && <div className="heading">Dashboard</div>}
           </a>
           <a className="nav-button" href="#">
-            <div className="icon">🔔</div>
-            <div>Alerts</div>
+            <img src="/Alarm.png" alt="alertIcon" className="icon" />
+            {!collapsed && <div className="heading">Alerts</div>}
           </a>
           <a className="nav-button" href="#">
-            <div className="icon">📊</div>
-            <div>Reports</div>
+            <img src="/reports.png" alt="graphIcon" className="icon" />
+            {!collapsed && <div className="heading">Reports</div>}
           </a>
         </nav>
 
         <div className="close-tab">
-          <div className="icon">⟵</div>
-          <div className="muted">Close Tab</div>
-        </div>
+  <button
+    className="collapse-btn"
+    onClick={() => setCollapsed((c) => !c)}
+    aria-label="Toggle sidebar">
+      
+    {collapsed ? "→" : "←"}
+  </button>
+
+  {!collapsed && <div className="muted">Close Tab</div>}
+</div>
       </aside>
 
       {/* CENTER MAP */}
@@ -61,21 +73,21 @@ function App() {
           <h3>Active Alerts</h3>
           <div className="alertsList">
             <div className="alertItem">
-              <div className="alertIcon red">!</div>
+              <img src="/importantRed.png" alt="alert" className="alertIcon" />
               <div className="meta">
                 <div className="title">High Litter Level in Dadri</div>
                 <div className="time muted">Seen 15 mins ago</div>
               </div>
             </div>
             <div className="alertItem">
-              <img src="/alertYellow.png" alt="alert" />
+              <img src="/alertYellow.png" alt="alert" className="alertIcon" />
               <div className="meta">
                 <div className="title">High Litter Level in Dadri</div>
                 <div className="time muted">Seen 15 mins ago</div>
               </div>
             </div>
             <div className="alertItem">
-              <div className="alertIcon brown">🗑</div>
+              <img src="/trashIcon.png" alt="alert" className="alertIcon" />
               <div className="meta">
                 <div className="title">High Litter Level in Dadri</div>
                 <div className="time muted">Seen 15 mins ago</div>
