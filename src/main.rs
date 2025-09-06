@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
 
     let address = match env::var("ADDRESS") {
         Ok(addr) => SocketAddr::from_str(&addr).unwrap(),
-        Err(_) => SocketAddr::from_str("127.0.0.1").unwrap(),
+        Err(_) => SocketAddr::from_str("127.0.0.1:7504").unwrap(),
     };
 
     let port = match env::var("PORT") {
