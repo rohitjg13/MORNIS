@@ -45,22 +45,20 @@ struct ResponseMessage {
 /// * `prompt` - Text prompt to send with the image
 /// * `model` - Model to use (e.g., "gpt-4o", "gpt-4o-mini")
 pub async fn call_openai_vlm(
-    api_key: &str,
-    image_url: &str,
-    prompt: &str,
-    model: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
+    api_key: String,
+    image_url: String,
+    prompt: String,
+    model: String,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync + 'static>> {
     let client = reqwest::Client::new();
 
     let messages = vec![Message {
         role: "user".to_string(),
         content: vec![
-            MessageContent::Text {
-                text: prompt.to_string(),
-            },
+            MessageContent::Text { text: prompt },
             MessageContent::ImageUrl {
                 image_url: ImageUrl {
-                    url: image_url.to_string(),
+                    url: image_url,
                     detail: Some("auto".to_string()),
                 },
             },
@@ -97,13 +95,13 @@ pub async fn call_openai_vlm(
 
 /// Alternative: Call with base64 encoded image
 pub async fn call_openai_vlm_base64(
-    api_key: &str,
-    image_base64: &str,
-    prompt: &str,
-    model: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
+    api_key: String,
+    image_base64: String,
+    prompt: String,
+    model: String,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync + 'static>> {
     let image_url = format!("data:image/jpeg;base64,{}", image_base64);
-    call_openai_vlm(api_key, &image_url, prompt, model).await
+    call_openai_vlm(api_key, image_url, prompt, model).await
 }
 
 #[cfg(test)]
@@ -113,10 +111,10 @@ mod tests {
     #[tokio::test]
     async fn test_vlm_call() {
         // Example usage (requires actual API key)
-        let api_key = "your-api-key-here";
-        let image_url = "https://example.com/image.jpg";
-        let prompt = "What's in this image?";
-        let model = "gpt-4o-mini";
+        let api_key = "your-api-key-here".to_string();
+        let image_url = "https://example.com/image.jpg".to_string();
+        let prompt = "What's in this image?".to_string();
+        let model = "gpt-4o-mini".to_string();
 
         match call_openai_vlm(api_key, image_url, prompt, model).await {
             Ok(response) => println!("Response: {}", response),
