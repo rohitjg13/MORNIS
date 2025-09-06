@@ -28,6 +28,41 @@ function App() {
     },
   ]);
 
+  const reportsData = [
+    {
+      id: 1,
+      image: "/garbage1.jpg",
+      date: "2025-03-17",
+      time: "5:30 PM",
+      location: "Central Park",
+      pileSize: 60,
+    },
+    {
+      id: 2,
+      image: "/garbage2.jpg",
+      date: "2025-03-17",
+      time: "5:30 PM",
+      location: "Central Park",
+      pileSize: 40,
+    },
+    {
+      id: 3,
+      image: "/garbage3.jpg",
+      date: "2025-03-17",
+      time: "5:30 PM",
+      location: "Central Park",
+      pileSize: 70,
+    },
+    {
+      id: 4,
+      image: "/garbage2.jpg",
+      date: "2025-03-17",
+      time: "5:30 PM",
+      location: "Central Park",
+      pileSize: 50,
+    },
+  ];
+
   const getSeverityClass = (severity: string) => {
     switch (severity.toLowerCase()) {
       case "high":
@@ -81,9 +116,9 @@ function App() {
         </div>
       </aside>
 
+      {/* DASHBOARD PAGE */}
       {currentPage === "dashboard" && (
         <>
-          {/* CENTER MAP */}
           <main className="center" role="main">
             <div className="map-wrap">
               <img
@@ -94,9 +129,7 @@ function App() {
             </div>
           </main>
 
-          {/* RIGHT INFO COLUMN */}
           <aside className="rightCol" aria-label="Info panels">
-            {/* Cleanliness Score */}
             <section className="panel score">
               <h3>Cleanliness Score</h3>
               <div className="overall">
@@ -107,7 +140,6 @@ function App() {
               </div>
             </section>
 
-            {/* Active Alerts */}
             <section className="panel">
               <h3>Active Alerts</h3>
               <div className="alertsList">
@@ -143,7 +175,6 @@ function App() {
               </div>
             </section>
 
-            {/* Trends */}
             <section className="panel trends">
               <h3>Trends</h3>
               <div className="chart-placeholder">[ Chart Placeholder ]</div>
@@ -152,11 +183,11 @@ function App() {
         </>
       )}
 
+      {/* ALERTS PAGE */}
       {currentPage === "alerts" && (
         <div className="alerts-dashboard">
           <div className="alerts-header">
             <h1 className="alerts-title">Alerts</h1>
-
             <div className="alerts-filters">
               <button className="alerts-filter-btn">Date</button>
               <button className="alerts-filter-btn">Status</button>
@@ -182,7 +213,9 @@ function App() {
                     </td>
                     <td className="alerts-table-cell">
                       <span
-                        className={`alerts-severity-badge ${getSeverityClass(alert.severity)}`}
+                        className={`alerts-severity-badge ${getSeverityClass(
+                          alert.severity
+                        )}`}
                       >
                         {alert.severity}
                       </span>
@@ -197,6 +230,56 @@ function App() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* REPORTS PAGE */}
+      {currentPage === "reports" && (
+        <div className="reports-dashboard">
+          <div className="reports-header">
+            <h1 className="reports-title">Reports</h1>
+            <div className="reports-filters">
+              <button className="reports-filter-btn">Date</button>
+              <button className="reports-filter-btn">Location</button>
+              <button className="reports-filter-btn">Garbage Type</button>
+            </div>
+          </div>
+
+          <div className="reports-grid">
+            {reportsData.map((report) => (
+              <div className="report-card" key={report.id}>
+                <img
+                  src="/garbage.jpeg"
+                  alt="Garbage report"
+                  className="report-img"
+                />
+
+                <div className="report-details">
+                  <div className="meta">
+                    <div className="time">
+                      🕒 {report.date} {report.time}
+                    </div>
+                    <div className="location">📍 {report.location}</div>
+                  </div>
+
+                  <div className="pile-size">
+                    Pile Size
+                    <div className="progress-bar">
+                      <div
+                        className="progress-fill"
+                        style={{ width: `${report.pileSize}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="actions">
+                    <button className="view-btn">👁 View</button>
+                    <button className="delete-btn">🗑 Delete</button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
