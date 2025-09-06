@@ -1,19 +1,60 @@
 import { supabase } from '@/lib/supabase';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const routeData = [
-	{ id: 1, area: 'Downtown District', status: 'Pending', houses: 24, collected: 18 },
-	{ id: 2, area: 'Residential Zone A', status: 'In Progress', houses: 32, collected: 8 },
-	{ id: 3, area: 'Industrial Area', status: 'Completed', houses: 16, collected: 16 },
-	{ id: 4, area: 'Suburb Heights', status: 'Pending', houses: 28, collected: 0 },
+	{ id: 1, area: 'Downtown District', status: 'Pending', stops: 24 },
+	{ id: 2, area: 'Residential Zone A', status: 'In Progress', stops: 32 },
+	{ id: 3, area: 'Industrial Area', status: 'Completed', stops: 16 },
+	{ id: 4, area: 'Suburb Heights', status: 'Pending', stops: 28 },
 ];
 
+interface RouteStep {
+	step: number;
+	start: string;
+	end: string;
+	distance: string;
+	duration: string;
+}
+
+interface OptimizedRoute {
+	status: string;
+	route_text: RouteStep[];
+	maps_url: string;
+}
+
 export default function DriverDashboard() {
-	const [selectedRoute, setSelectedRoute] = useState<number | null>(null);
+	const [optimizedRoute, setOptimizedRoute] = useState<OptimizedRoute | null>(null);
+	const [showRouteModal, setShowRouteModal] = useState(false);
+	const [routeStatuses, setRouteStatuses] = useState<{[key: number]: string}>({});
+
+	useEffect(() => {
+		loadRouteStatuses();
+	}, []);
+
+	const loadRouteStatuses = async () => {
+		try {
+			const savedStatuses = await AsyncStorage.getItem('routeStatuses');
+			if (savedStatuses) {
+				setRouteStatuses(JSON.parse(savedStatuses));
+			}
+		} catch (error) {
+			console.error('Error loading route statuses:', error);
+		}
+	};
+
+	const saveRouteStatus = async (routeId: number, status: string) => {
+		try {
+			const newStatuses = { ...routeStatuses, [routeId]: status };
+			setRouteStatuses(newStatuses);
+			await AsyncStorage.setItem('routeStatuses', JSON.stringify(newStatuses));
+		} catch (error) {
+			console.error('Error saving route status:', error);
+		}
+	};
 
 	const handleSignOut = async () => {
 		try {
@@ -38,10 +79,75 @@ export default function DriverDashboard() {
 		}
 	};
 
-	const handleRouteAction = (routeId: number, action: 'start' | 'complete') => {
+	const optimizeRoute = async () => {
+		try {
+			// Replace with your actual backend URL
+			const response = await fetch('YOUR_BACKEND_URL/optimize-route', {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			});
 
-        Alert.alert('Success', `Route ${action === 'start' ? 'started' : 'completed'} successfully!`);
+			if (response.ok) {
+				const data: OptimizedRoute = await response.json();
+				setOptimizedRoute(data);
+				setShowRouteModal(true);
+			} else {
+				Alert.alert('Error', 'Failed to optimize route');
+			}
+		} catch (error) {
+			// For demo purposes, using mock data
+			const mockData: OptimizedRoute = {
+				status: 'ok',
+				route_text: [
+					{
+						step: 1,
+						start: "67/1, KG Halli, D' Souza Layout, Ashok Nagar, Bengaluru, Karnataka 560001, India",
+						end: 'WJPF+3QH, KHB Colony, 4th Block, Koramangala, Bengaluru, Karnataka 560095, India',
+						distance: '6.6 km',
+						duration: '23 mins'
+					},
+					{
+						step: 2,
+						start: 'WJPF+3QH, KHB Colony, 4th Block, Koramangala, Bengaluru, Karnataka 560095, India',
+						end: '438, 56th Cross Rd, 3rd Block, Rajajinagar, Bengaluru, Karnataka 560010, India',
+						distance: '12.7 km',
+						duration: '42 mins'
+					},
+					{
+						step: 3,
+						start: '438, 56th Cross Rd, 3rd Block, Rajajinagar, Bengaluru, Karnataka 560010, India',
+						end: "67/1, KG Halli, D' Souza Layout, Ashok Nagar, Bengaluru, Karnataka 560001, India",
+						distance: '5.6 km',
+						duration: '17 mins'
+					}
+				],
+				maps_url: 'https://www.google.com/maps/dir/12.9716,77.5946/12.9352,77.6245/12.986,77.555/12.9716,77.5946'
+			};
+			setOptimizedRoute(mockData);
+			setShowRouteModal(true);
+		}
 	};
+
+	const openMapsRoute = () => {
+		if (optimizedRoute?.maps_url) {
+			Linking.openURL(optimizedRoute.maps_url);
+		}
+	};
+
+	const handleRouteAction = async (routeId: number, action: 'start' | 'complete') => {
+		const newStatus = action === 'start' ? 'In Progress' : 'Completed';
+		await saveRouteStatus(routeId, newStatus);
+		Alert.alert('Success', `Route ${action === 'start' ? 'started' : 'completed'} successfully!`);
+	};
+
+	const getRouteStatus = (routeId: number, originalStatus: string) => {
+		return routeStatuses[routeId] || originalStatus;
+	};
+
+	const completedRoutes = Object.values(routeStatuses).filter(status => status === 'Completed').length;
+	const totalStops = routeData.reduce((sum, route) => sum + route.stops, 0);
 
 	return (
 		<View style={{ flex: 1, backgroundColor: '#111', paddingTop: 40 }}>
@@ -53,81 +159,113 @@ export default function DriverDashboard() {
 					</TouchableOpacity>
 				</View>
 
+				<TouchableOpacity style={styles.optimizeButton} onPress={optimizeRoute}>
+					<Ionicons name="navigate-outline" size={24} color="#000" />
+					<Text style={styles.optimizeButtonText}>Optimize Route</Text>
+				</TouchableOpacity>
+
 				<View style={styles.statsContainer}>
 					<View style={styles.statCard}>
 						<Text style={styles.statNumber}>4</Text>
 						<Text style={styles.statLabel}>Total Routes</Text>
 					</View>
 					<View style={styles.statCard}>
-						<Text style={styles.statNumber}>1</Text>
+						<Text style={styles.statNumber}>{completedRoutes}</Text>
 						<Text style={styles.statLabel}>Completed</Text>
 					</View>
 					<View style={styles.statCard}>
-						<Text style={styles.statNumber}>42</Text>
-						<Text style={styles.statLabel}>Houses Left</Text>
+						<Text style={styles.statNumber}>{totalStops}</Text>
+						<Text style={styles.statLabel}>Total Stops</Text>
 					</View>
 				</View>
 
 				<Text style={styles.sectionTitle}>Today's Routes</Text>
 
-				{routeData.map((route) => (
-					<View key={route.id} style={styles.routeCard}>
-						<View style={styles.routeHeader}>
-							<Text style={styles.routeArea}>{route.area}</Text>
-							<View style={[styles.statusBadge, { backgroundColor: getStatusColor(route.status) }]}>
-								<Text style={styles.statusText}>{route.status}</Text>
+				{routeData.map((route) => {
+					const currentStatus = getRouteStatus(route.id, route.status);
+					return (
+						<View key={route.id} style={styles.routeCard}>
+							<View style={styles.routeHeader}>
+								<Text style={styles.routeArea}>{route.area}</Text>
+								<View style={[styles.statusBadge, { backgroundColor: getStatusColor(currentStatus) }]}>
+									<Text style={styles.statusText}>{currentStatus}</Text>
+								</View>
 							</View>
-						</View>
 
-						<View style={styles.routeStats}>
-							<View style={styles.routeStat}>
-								<Ionicons name="home-outline" size={16} color="#aaa" />
-								<Text style={styles.routeStatText}>{route.houses} Houses</Text>
+							<View style={styles.routeStats}>
+								<View style={styles.routeStat}>
+									<Ionicons name="location-outline" size={16} color="#aaa" />
+									<Text style={styles.routeStatText}>{route.stops} Stops</Text>
+								</View>
 							</View>
-							<View style={styles.routeStat}>
-								<Ionicons name="checkmark-circle-outline" size={16} color="#aaa" />
-								<Text style={styles.routeStatText}>{route.collected} Collected</Text>
-							</View>
-						</View>
 
-						<View style={styles.progressContainer}>
-							<View style={styles.progressBar}>
-								<View 
-									style={[
-										styles.progressFill, 
-										{ width: `${(route.collected / route.houses) * 100}%` }
-									]} 
-								/>
-							</View>
-							<Text style={styles.progressText}>
-								{Math.round((route.collected / route.houses) * 100)}%
-							</Text>
-						</View>
-
-						<View style={styles.routeActions}>
-							{route.status === 'Pending' && (
-								<TouchableOpacity 
-									style={styles.actionButton}
-									onPress={() => handleRouteAction(route.id, 'start')}
-								>
-									<Text style={styles.actionButtonText}>Start Route</Text>
+							<View style={styles.routeActions}>
+								{currentStatus === 'Pending' && (
+									<TouchableOpacity 
+										style={styles.actionButton}
+										onPress={() => handleRouteAction(route.id, 'start')}
+									>
+										<Text style={styles.actionButtonText}>Start Route</Text>
+									</TouchableOpacity>
+								)}
+								{currentStatus === 'In Progress' && (
+									<TouchableOpacity 
+										style={[styles.actionButton, styles.completeButton]}
+										onPress={() => handleRouteAction(route.id, 'complete')}
+									>
+										<Text style={styles.actionButtonText}>Mark Complete</Text>
+									</TouchableOpacity>
+								)}
+								<TouchableOpacity style={styles.viewButton}>
+									<Text style={styles.viewButtonText}>View Details</Text>
 								</TouchableOpacity>
-							)}
-							{route.status === 'In Progress' && (
-								<TouchableOpacity 
-									style={[styles.actionButton, styles.completeButton]}
-									onPress={() => handleRouteAction(route.id, 'complete')}
-								>
-									<Text style={styles.actionButtonText}>Mark Complete</Text>
-								</TouchableOpacity>
-							)}
-							<TouchableOpacity style={styles.viewButton}>
-								<Text style={styles.viewButtonText}>View Details</Text>
-							</TouchableOpacity>
+							</View>
 						</View>
-					</View>
-				))}
+					);
+				})}
 			</ScrollView>
+
+			<Modal
+				visible={showRouteModal}
+				animationType="slide"
+				presentationStyle="pageSheet"
+			>
+				<View style={styles.modalContainer}>
+					<View style={styles.modalHeader}>
+						<Text style={styles.modalTitle}>Optimized Route</Text>
+						<TouchableOpacity 
+							onPress={() => setShowRouteModal(false)}
+							style={styles.closeButton}
+						>
+							<Ionicons name="close" size={24} color="#fff" />
+						</TouchableOpacity>
+					</View>
+
+					<ScrollView style={styles.modalContent}>
+						{optimizedRoute?.route_text.map((step, index) => (
+							<View key={index} style={styles.stepCard}>
+								<View style={styles.stepHeader}>
+									<Text style={styles.stepNumber}>Step {step.step}</Text>
+									<Text style={styles.stepDuration}>{step.duration}</Text>
+								</View>
+								<Text style={styles.stepStart}>From: {step.start}</Text>
+								<Text style={styles.stepEnd}>To: {step.end}</Text>
+								<Text style={styles.stepDistance}>Distance: {step.distance}</Text>
+							</View>
+						))}
+					</ScrollView>
+
+					<View style={styles.modalActions}>
+						<TouchableOpacity 
+							style={styles.takeRouteButton}
+							onPress={openMapsRoute}
+						>
+							<Ionicons name="map" size={20} color="#000" />
+							<Text style={styles.takeRouteText}>Take Route</Text>
+						</TouchableOpacity>
+					</View>
+				</View>
+			</Modal>
 		</View>
 	);
 }
@@ -147,6 +285,21 @@ const styles = StyleSheet.create({
 	},
 	signOutButton: {
 		padding: 8,
+	},
+	optimizeButton: {
+		backgroundColor: '#ff0',
+		borderRadius: 16,
+		padding: 16,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		marginBottom: 20,
+	},
+	optimizeButtonText: {
+		color: '#000',
+		fontSize: 18,
+		fontWeight: '600',
+		marginLeft: 8,
 	},
 	statsContainer: {
 		flexDirection: 'row',
@@ -205,8 +358,6 @@ const styles = StyleSheet.create({
 		fontWeight: '600',
 	},
 	routeStats: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
 		marginBottom: 15,
 	},
 	routeStat: {
@@ -217,29 +368,6 @@ const styles = StyleSheet.create({
 		color: '#aaa',
 		marginLeft: 8,
 		fontSize: 14,
-	},
-	progressContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		marginBottom: 15,
-	},
-	progressBar: {
-		flex: 1,
-		height: 8,
-		backgroundColor: '#333',
-		borderRadius: 4,
-		marginRight: 10,
-	},
-	progressFill: {
-		height: '100%',
-		backgroundColor: '#ff0',
-		borderRadius: 4,
-	},
-	progressText: {
-		color: '#fff',
-		fontSize: 14,
-		fontWeight: '600',
-		width: 40,
 	},
 	routeActions: {
 		flexDirection: 'row',
@@ -273,31 +401,84 @@ const styles = StyleSheet.create({
 		fontWeight: '600',
 		textAlign: 'center',
 	},
-	tabBar: {
-		flexDirection: 'row',
-		backgroundColor: '#222',
-		paddingVertical: 8,
-		borderTopLeftRadius: 18,
-		borderTopRightRadius: 18,
-		justifyContent: 'space-around',
-		alignItems: 'center',
-		position: 'absolute',
-		left: 0,
-		right: 0,
-		bottom: 0,
-		borderTopWidth: 2,
-		borderColor: '#333',
-	},
-	tabItem: {
-		alignItems: 'center',
+	modalContainer: {
 		flex: 1,
+		backgroundColor: '#111',
 	},
-	tabItemActive: {
-		// highlight active tab
+	modalHeader: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+		padding: 20,
+		paddingTop: 60,
+		borderBottomWidth: 1,
+		borderBottomColor: '#333',
 	},
-	tabLabel: {
+	modalTitle: {
 		color: '#fff',
-		fontSize: 13,
-		marginTop: 2,
+		fontSize: 24,
+		fontWeight: 'bold',
+	},
+	closeButton: {
+		padding: 8,
+	},
+	modalContent: {
+		flex: 1,
+		padding: 20,
+	},
+	stepCard: {
+		backgroundColor: '#222',
+		borderRadius: 12,
+		padding: 16,
+		marginBottom: 12,
+	},
+	stepHeader: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+		marginBottom: 8,
+	},
+	stepNumber: {
+		color: '#ff0',
+		fontSize: 16,
+		fontWeight: 'bold',
+	},
+	stepDuration: {
+		color: '#4CAF50',
+		fontSize: 14,
+		fontWeight: '600',
+	},
+	stepStart: {
+		color: '#fff',
+		fontSize: 14,
+		marginBottom: 4,
+	},
+	stepEnd: {
+		color: '#fff',
+		fontSize: 14,
+		marginBottom: 4,
+	},
+	stepDistance: {
+		color: '#aaa',
+		fontSize: 12,
+	},
+	modalActions: {
+		padding: 20,
+		borderTopWidth: 1,
+		borderTopColor: '#333',
+	},
+	takeRouteButton: {
+		backgroundColor: '#ff0',
+		borderRadius: 12,
+		padding: 16,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	takeRouteText: {
+		color: '#000',
+		fontSize: 16,
+		fontWeight: '600',
+		marginLeft: 8,
 	},
 });
