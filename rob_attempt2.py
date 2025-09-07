@@ -401,7 +401,6 @@ if __name__ == "__main__":
     API_KEY = "UGKpDQUUduWH3tlrf0CU"
     IMAGE_PATH = "/home/ojas/Downloads/ssh_garbage/landfill.jpg"
 
-    print(f"🔑 Using API key: {API_KEY[:10]}...")
     print(f"🖼️  Processing image: {IMAGE_PATH}")
 
     try:
@@ -418,10 +417,10 @@ if __name__ == "__main__":
 
         # Run prediction on the hardcoded image
         # Run prediction with boosting
-        prediction = visualizer.predict_image(IMAGE_PATH, confidence=0.3, overlap=0.5,
-                                              high_prob_threshold=0.7,  # Adjust as needed
+        prediction = visualizer.predict_image(IMAGE_PATH, confidence=0.05, overlap=0.5,
+                                              high_prob_threshold=0.5,  # Adjust as needed
                                               adjacency_threshold=0.2,   # 20% overlap to be "next to"
-                                              boost_factor=1.5)          # 50% increase
+                                              boost_factor=5.0)          # 50% increase
 
         if prediction:
             pred_count = len(prediction.json()['predictions'])
