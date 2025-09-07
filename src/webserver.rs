@@ -10,9 +10,9 @@ use axum::{
     routing::{get, post},
     serve,
 };
-use chrono::Utc;
-use serde::Deserialize;
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
@@ -21,6 +21,24 @@ use tower_http::cors::CorsLayer;
 struct AppState {
     config: Config,
     db_pool: PgPool,
+}
+
+// Add a struct for the database record
+#[derive(Debug, Serialize, FromRow)]
+struct DbRecord {
+    id: i64,
+    created_at: DateTime<Utc>,
+    latitude: f64,
+    longitude: f64,
+    description: String,
+    score: i32,
+    status: String,
+}
+
+// Response struct for the top records endpoint
+#[derive(Debug, Serialize)]
+struct TopRecordsResponse {
+    records: Vec<DbRecord>,
 }
 
 pub async fn run_ws(config: crate::config::Config) {
@@ -55,6 +73,7 @@ pub async fn run_ws(config: crate::config::Config) {
     let app = Router::new()
         .route("/", get(index_feed_handler))
         .route("/report", post(report_handler))
+        .route("/top-records", get(top_records_handler))
         .layer(tower::ServiceBuilder::new().layer(CorsLayer::very_permissive()))
         .with_state(state);
 
@@ -72,6 +91,42 @@ async fn index_feed_handler() -> Json<IndexResponse> {
     Json(IndexResponse {
         response: "trashtrack up and running".to_string(),
     })
+}
+
+async fn top_records_handler(
+    State(state): State<Arc<RwLock<AppState>>>,
+) -> (StatusCode, Json<TopRecordsResponse>) {
+    println!("Fetching top 5 records");
+
+    let state_read = state.read().await;
+    let db_pool = state_read.db_pool.clone();
+    drop(state_read); // Release the read lock early
+
+    // Query to fetch top 5 records sorted by score (highest to lowest)
+    let records_result = sqlx::query_as::<_, DbRecord>(
+        r#"
+        SELECT id, created_at, latitude, longitude, description, score, status
+        FROM records
+        ORDER BY score DESC
+        LIMIT 5
+        "#,
+    )
+    .fetch_all(&db_pool)
+    .await;
+
+    match records_result {
+        Ok(records) => {
+            println!("Successfully fetched {} records", records.len());
+            (StatusCode::OK, Json(TopRecordsResponse { records }))
+        }
+        Err(e) => {
+            eprintln!("Database query error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(TopRecordsResponse { records: vec![] }),
+            )
+        }
+    }
 }
 
 async fn report_handler(
