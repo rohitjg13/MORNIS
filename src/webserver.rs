@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    types::{IndexResponse, Record, ReportRequest, ReportResponse},
+    types::{IndexResponse, ReportRequest, ReportResponse},
     vlm,
 };
 use axum::{
@@ -11,7 +11,7 @@ use axum::{
     serve,
 };
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use sqlx::{FromRow, PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use tokio::net::TcpListener;
