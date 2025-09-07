@@ -83,7 +83,7 @@ export default function DriverDashboard() {
 	const optimizeRoute = async () => {
 		try {
 			// Replace with your actual backend URL
-			const response = await fetch('YOUR_BACKEND_URL/optimize-route', {
+			const response = await fetch('https://troddit.ice.computer/optimized-path', {
 				method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
@@ -168,15 +168,15 @@ export default function DriverDashboard() {
 
 				<View style={styles.statsContainer}>
 					<View style={styles.statCard}>
-						<Text style={styles.statNumber}>4</Text>
+						<Text style={styles.statNumber}>1</Text>
 						<Text style={styles.statLabel}>Total Routes</Text>
 					</View>
 					<View style={styles.statCard}>
-						<Text style={styles.statNumber}>{completedRoutes}</Text>
+						<Text style={styles.statNumber}>10</Text>
 						<Text style={styles.statLabel}>Completed</Text>
 					</View>
 					<View style={styles.statCard}>
-						<Text style={styles.statNumber}>{totalStops}</Text>
+						<Text style={styles.statNumber}>5</Text>
 						<Text style={styles.statLabel}>Total Stops</Text>
 					</View>
 				</View>
