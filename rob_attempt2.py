@@ -341,6 +341,41 @@ class TACOVisualization:
 
         return results_summary
 
+
+
+def annotate_image(image_path, taco_visualization, confidence=0.3, **kwargs):
+    """
+    Runs prediction and returns the annotated image as a NumPy array.
+
+    Args:
+        image_path: Path to the input image.
+        taco_visualization: An instance of TACOVisualization (already initialized).
+        confidence: Confidence threshold for predictions.
+        **kwargs: Additional arguments for visualization (e.g., show_masks, show_boxes).
+
+    Returns:
+        Annotated image as a NumPy array (RGB).
+    """
+    # Run prediction
+    prediction = taco_visualization.predict_image(image_path, confidence=confidence)
+    if prediction is None:
+        raise RuntimeError("Prediction failed or no detections.")
+
+    # Visualize and capture the annotated image
+    import matplotlib.pyplot as plt
+    fig = taco_visualization.visualize_prediction(
+        image_path, prediction, save_path=None, **kwargs
+    )
+    # Convert the Matplotlib figure to a NumPy array
+    fig.canvas.draw()
+    annotated_img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    annotated_img = annotated_img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    plt.close(fig)
+    return annotated_img
+
+
+
+
 def main():
     parser = argparse.ArgumentParser(description='TACO Waste Detection with Roboflow')
     parser.add_argument('--api_key', type=str, required=True,
