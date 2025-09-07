@@ -122,8 +122,8 @@ async fn top_records_handler(
     let records_result = sqlx::query_as::<_, DbRecord>(
         r#"
         SELECT 
-            id, 
-            created_at::text as created_at,
+            id,
+            created_at, 
             latitude, 
             longitude, 
             description, 
