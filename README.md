@@ -1,1 +1,1 @@
-Refer to the other branches
+Refer to the other branches.
