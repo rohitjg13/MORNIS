@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    types::{IndexResponse, ReportRequest, ReportResponse},
+    types::{IndexResponse, Record, ReportRequest, ReportResponse},
     vlm,
 };
 use axum::{
@@ -11,7 +11,7 @@ use axum::{
     serve,
 };
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -82,7 +82,23 @@ pub async fn run_ws(config: crate::config::Config) {
         None => TcpListener::bind("0.0.0.0:7504").await.unwrap(),
     };
 
-    println!("Server listening on {}", listener.local_addr().unwrap());
+    let server_addr = listener.local_addr().unwrap();
+
+    println!("\n🚀 TrashTrack Server Starting...");
+    println!("================================");
+    println!("Server listening on: http://{}", server_addr);
+    println!("\nAvailable Endpoints:");
+    println!("-------------------");
+    println!("📍 GET  /              - Health check endpoint");
+    println!("                         Returns server status");
+    println!();
+    println!("📸 POST /report        - Submit a trash report");
+    println!("                         Body: JSON with image (base64), latitude, longitude");
+    println!("                         Returns: trash score (0-100) and category");
+    println!();
+    println!("📊 GET  /top-records   - Get top 5 trash locations");
+    println!("                         Returns: 5 records with highest trash scores");
+    println!("================================\n");
 
     serve(listener, app.into_make_service()).await.unwrap();
 }
@@ -105,7 +121,14 @@ async fn top_records_handler(
     // Query to fetch top 5 records sorted by score (highest to lowest)
     let records_result = sqlx::query_as::<_, DbRecord>(
         r#"
-        SELECT id, created_at, latitude, longitude, description, score, status
+        SELECT 
+            id, 
+            created_at::text as created_at,
+            latitude, 
+            longitude, 
+            description, 
+            score, 
+            status
         FROM records
         ORDER BY score DESC
         LIMIT 5
