@@ -10,6 +10,26 @@ export default function Index() {
 
   useEffect(() => {
     checkAuthState();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id);
+      
+      if (event === 'SIGNED_IN' && session) {
+        const userType = await AsyncStorage.getItem('userType');
+        if (userType === 'driver') {
+          router.replace('/drivers/dashboard');
+        } else if (userType === 'people') {
+          router.replace('/people/dashboard');
+        }
+      } else if (event === 'SIGNED_OUT') {
+        await AsyncStorage.removeItem('userType');
+        router.replace('/login');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const checkAuthState = async () => {
@@ -24,9 +44,19 @@ export default function Index() {
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
+      // Wait a bit for Supabase to restore session from storage
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Error getting session:', error);
+        router.replace('/login');
+        return;
+      }
       
       if (session) {
+        console.log('Session found:', session.user.id);
         const userType = await AsyncStorage.getItem('userType');
         
         if (userType === 'driver') {
@@ -37,6 +67,7 @@ export default function Index() {
           router.replace('/login');
         }
       } else {
+        console.log('No session found, redirecting to login');
         router.replace('/login');
       }
     } catch (error) {

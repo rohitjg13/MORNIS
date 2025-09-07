@@ -180,7 +180,7 @@ export default function DriverDashboard() {
 						<Text style={styles.statLabel}>Total Stops</Text>
 					</View>
 				</View>
-
+{/* 
 				<Text style={styles.sectionTitle}>Today&apos;s Routes</Text>
 
 				{routeData.map((route) => {
@@ -224,7 +224,7 @@ export default function DriverDashboard() {
 							</View>
 						</View>
 					);
-				})}
+				})} */}
 			</ScrollView>
 
 			<Modal
