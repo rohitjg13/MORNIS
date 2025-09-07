@@ -343,35 +343,55 @@ class TACOVisualization:
 
 
 
-def annotate_image(image_path, taco_visualization, confidence=0.3, **kwargs):
+def annotate_image(
+    image_path,
+    taco_visualization,
+    confidence=0.3,
+    overlap=0.5,
+    high_prob_threshold=0.7,
+    adjacency_threshold=0.2,
+    boost_factor=1.5,
+    show_masks=True,
+    show_boxes=True
+):
     """
-    Runs prediction and returns the annotated image as a NumPy array.
+    Runs prediction and returns the annotated image as a NumPy array (RGB).
 
     Args:
         image_path: Path to the input image.
         taco_visualization: An instance of TACOVisualization (already initialized).
         confidence: Confidence threshold for predictions.
-        **kwargs: Additional arguments for visualization (e.g., show_masks, show_boxes).
+        overlap: Overlap threshold for NMS.
+        high_prob_threshold: Threshold for high-probability segments.
+        adjacency_threshold: Overlap ratio for adjacency boosting.
+        boost_factor: Probability boost factor for neighbors.
+        show_masks: Whether to show segmentation masks.
+        show_boxes: Whether to show bounding boxes.
 
     Returns:
         Annotated image as a NumPy array (RGB).
     """
-    # Run prediction
-    prediction = taco_visualization.predict_image(image_path, confidence=confidence)
+    prediction = taco_visualization.predict_image(
+        image_path,
+        confidence=confidence,
+        overlap=overlap,
+        high_prob_threshold=high_prob_threshold,
+        adjacency_threshold=adjacency_threshold,
+        boost_factor=boost_factor
+    )
     if prediction is None:
         raise RuntimeError("Prediction failed or no detections.")
 
-    # Visualize and capture the annotated image
     import matplotlib.pyplot as plt
     fig = taco_visualization.visualize_prediction(
-        image_path, prediction, save_path=None, **kwargs
+        image_path, prediction, save_path=None, show_masks=show_masks, show_boxes=show_boxes
     )
-    # Convert the Matplotlib figure to a NumPy array
     fig.canvas.draw()
     annotated_img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
     annotated_img = annotated_img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
     plt.close(fig)
     return annotated_img
+
 
 
 
