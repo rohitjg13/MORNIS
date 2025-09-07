@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    types::{IndexResponse, ReportRequest, ReportResponse},
+    types::{IndexResponse, Record, ReportRequest, ReportResponse},
     vlm,
 };
 use axum::{
@@ -10,7 +10,9 @@ use axum::{
     routing::{get, post},
     serve,
 };
+use chrono::Utc;
 use serde::Deserialize;
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
@@ -18,11 +20,37 @@ use tower_http::cors::CorsLayer;
 
 struct AppState {
     config: Config,
+    db_pool: PgPool,
 }
 
 pub async fn run_ws(config: crate::config::Config) {
     let config_c = config.clone();
-    let state = Arc::new(RwLock::new(AppState { config }));
+
+    let db_pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&config.supabase_url)
+        .await
+        .expect("Failed to create database pool");
+
+    // Create table if it doesn't exist
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS records (
+            id BIGSERIAL PRIMARY KEY,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            latitude DOUBLE PRECISION NOT NULL,
+            longitude DOUBLE PRECISION NOT NULL,
+            description TEXT NOT NULL,
+            score INTEGER NOT NULL,
+            status TEXT NOT NULL
+        )
+        "#,
+    )
+    .execute(&db_pool)
+    .await
+    .expect("Failed to create records table");
+
+    let state = Arc::new(RwLock::new(AppState { config, db_pool }));
 
     let app = Router::new()
         .route("/", get(index_feed_handler))
@@ -52,8 +80,11 @@ async fn report_handler(
 ) -> (StatusCode, Json<ReportResponse>) {
     println!("Received report request");
 
-    let config_rwlock_read = &state.read().await;
+    let config_rwlock_read = state.read().await;
     let apikey = config_rwlock_read.config.openai_key.clone();
+    let db_pool = config_rwlock_read.db_pool.clone();
+    drop(config_rwlock_read); // Release the read lock early
+
     let model = "gpt-4o-mini".to_string();
 
     if apikey.is_empty() {
@@ -136,19 +167,61 @@ async fn report_handler(
         }
     };
 
-    println!(
-        "Successfully processed - Score: {}, Category: {}",
-        score_u16, category
-    );
+    let category_trimmed = category.trim();
 
-    (
-        StatusCode::OK,
-        Json(ReportResponse {
-            response: format!(
-                "Successfully uploaded trash report. Score: {}, Category: {}",
-                score_u16,
-                category.trim()
-            ),
-        }),
+    // No need for unwrap_or since these are already f64
+    let latitude = payload.latitude;
+    let longitude = payload.longitude;
+
+    // Create description combining score and category
+    let description = format!("Trash detected - Category: {}", category_trimmed);
+
+    // Insert record into database (using DEFAULT NOW() for created_at)
+    let insert_result = sqlx::query(
+        r#"
+        INSERT INTO records (latitude, longitude, description, score, status)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+        "#,
     )
+    .bind(latitude)
+    .bind(longitude)
+    .bind(&description)
+    .bind(score_u16 as i32)
+    .bind("pending")
+    .fetch_one(&db_pool)
+    .await;
+
+    match insert_result {
+        Ok(row) => {
+            let record_id: i64 = sqlx::Row::get(&row, "id");
+            println!(
+                "Successfully processed and stored - ID: {}, Score: {}, Category: {}",
+                record_id, score_u16, category_trimmed
+            );
+
+            (
+                StatusCode::OK,
+                Json(ReportResponse {
+                    response: format!(
+                        "Successfully uploaded trash report (ID: {}). Score: {}, Category: {}",
+                        record_id, score_u16, category_trimmed
+                    ),
+                }),
+            )
+        }
+        Err(e) => {
+            eprintln!("Database insert error: {}", e);
+            // Still return success for the VLM processing, but note the DB failure
+            (
+                StatusCode::PARTIAL_CONTENT,
+                Json(ReportResponse {
+                    response: format!(
+                        "Report processed (Score: {}, Category: {}) but failed to save to database: {}",
+                        score_u16, category_trimmed, e
+                    ),
+                }),
+            )
+        }
+    }
 }
