@@ -28,6 +28,9 @@ Cargo.lock
 .idea/
 out/
 
+!scripts/*
+!scripts
+
 # Visual Studio Code
 .vscode/*
 !.vscode/settings.json
