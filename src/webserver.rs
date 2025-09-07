@@ -11,8 +11,10 @@ use axum::{
     serve,
 };
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use sqlx::{FromRow, PgPool, postgres::PgPoolOptions};
+use std::process::Command;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
@@ -39,6 +41,13 @@ struct DbRecord {
 #[derive(Debug, Serialize)]
 struct TopRecordsResponse {
     records: Vec<DbRecord>,
+}
+
+// Response struct for the optimized path endpoint
+#[derive(Debug, Serialize, Deserialize)]
+struct OptimizedPathResponse {
+    #[serde(flatten)]
+    data: Value,
 }
 
 pub async fn run_ws(config: crate::config::Config) {
@@ -74,6 +83,7 @@ pub async fn run_ws(config: crate::config::Config) {
         .route("/", get(index_feed_handler))
         .route("/report", post(report_handler))
         .route("/top-records", get(top_records_handler))
+        .route("/optimized-path", get(optimized_path_handler))
         .layer(tower::ServiceBuilder::new().layer(CorsLayer::very_permissive()))
         .with_state(state);
 
@@ -98,6 +108,9 @@ pub async fn run_ws(config: crate::config::Config) {
     println!();
     println!("📊 GET  /top-records   - Get top 5 trash locations");
     println!("                         Returns: 5 records with highest trash scores");
+    println!();
+    println!("🗺️  GET  /optimized-path - Get optimized collection path");
+    println!("                         Returns: Optimized route through top trash locations");
     println!("================================\n");
 
     serve(listener, app.into_make_service()).await.unwrap();
@@ -112,8 +125,6 @@ async fn index_feed_handler() -> Json<IndexResponse> {
 async fn top_records_handler(
     State(state): State<Arc<RwLock<AppState>>>,
 ) -> (StatusCode, Json<TopRecordsResponse>) {
-    println!("Fetching top 5 records");
-
     let state_read = state.read().await;
     let db_pool = state_read.db_pool.clone();
     drop(state_read); // Release the read lock early
@@ -147,6 +158,157 @@ async fn top_records_handler(
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(TopRecordsResponse { records: vec![] }),
+            )
+        }
+    }
+}
+
+async fn optimized_path_handler(
+    State(state): State<Arc<RwLock<AppState>>>,
+) -> (StatusCode, Json<Value>) {
+    let state_read = state.read().await;
+    let db_pool = state_read.db_pool.clone();
+    drop(state_read); // Release the read lock early
+
+    // Query to fetch top 5 records sorted by score (highest to lowest)
+    let records_result = sqlx::query_as::<_, DbRecord>(
+        r#"
+        SELECT 
+            id,
+            created_at, 
+            latitude, 
+            longitude, 
+            description, 
+            score, 
+            status
+        FROM records
+        ORDER BY score DESC
+        LIMIT 5
+        "#,
+    )
+    .fetch_all(&db_pool)
+    .await;
+
+    let records = match records_result {
+        Ok(records) => {
+            println!(
+                "Successfully fetched {} records for path optimization",
+                records.len()
+            );
+            records
+        }
+        Err(e) => {
+            eprintln!("Database query error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": "Failed to fetch records from database"
+                })),
+            );
+        }
+    };
+
+    if records.is_empty() {
+        return (
+            StatusCode::OK,
+            Json(json!({
+                "message": "No records found for path optimization"
+            })),
+        );
+    }
+
+    // Build the JSON structure for the Python script
+    let mut locations = serde_json::Map::new();
+
+    // Add each record as a numbered location
+    for (index, record) in records.iter().enumerate() {
+        let location_key = (index + 1).to_string();
+        locations.insert(
+            location_key,
+            json!({
+                "lat": record.latitude,
+                "lon": record.longitude,
+                "trash_score": record.score
+            }),
+        );
+    }
+
+    // Add the depot location (fixed coordinates)
+    locations.insert(
+        "depot".to_string(),
+        json!({
+            "lat": 12.9716,
+            "lon": 77.5946
+        }),
+    );
+
+    let json_input = Value::Object(locations);
+    let json_string = json_input.to_string();
+
+    println!("Executing Python script with input: {}", json_string);
+
+    // Execute the Python script with the JSON input
+    // Using fish shell to source the virtual environment and run the script
+    let output = tokio::task::spawn_blocking(move || {
+        Command::new("fish")
+            .arg("-c")
+            .arg(format!(
+                "source scripts/bin/activate.fish && python scripts/path.py '{}'",
+                json_string
+            ))
+            .output()
+    })
+    .await;
+
+    match output {
+        Ok(Ok(output)) => {
+            if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                println!("Python script output: {}", stdout);
+
+                // Parse the Python script's JSON output
+                match serde_json::from_str::<Value>(&stdout) {
+                    Ok(json_output) => (StatusCode::OK, Json(json_output)),
+                    Err(e) => {
+                        eprintln!("Failed to parse Python output as JSON: {}", e);
+                        eprintln!("Raw output: {}", stdout);
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(json!({
+                                "error": "Failed to parse Python script output",
+                                "raw_output": stdout.to_string()
+                            })),
+                        )
+                    }
+                }
+            } else {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                eprintln!("Python script failed: {}", stderr);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({
+                        "error": "Python script execution failed",
+                        "stderr": stderr.to_string()
+                    })),
+                )
+            }
+        }
+        Ok(Err(e)) => {
+            eprintln!("Failed to execute Python script: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": format!("Failed to execute Python script: {}", e)
+                })),
+            )
+        }
+        Err(e) => {
+            eprintln!("Task join error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": "Internal server error"
+                })),
             )
         }
     }
