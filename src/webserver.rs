@@ -253,7 +253,7 @@ async fn optimized_path_handler(
         Command::new("fish")
             .arg("-c")
             .arg(format!(
-                "source scripts/bin/activate.fish && python scripts/path.py '{}'",
+                "source scripts/bin/activate.fish && python3 scripts/path.py '{}'",
                 json_string
             ))
             .output()
